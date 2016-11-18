@@ -1,2 +1,0 @@
-# SRT
-Systems Request Tracker
