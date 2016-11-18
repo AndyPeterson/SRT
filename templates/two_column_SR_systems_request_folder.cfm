@@ -11,7 +11,7 @@
 <!----- SYSTEMS REQUEST CODE ------------>
 <cfif $.content('Kickoff_Request') neq "">
 	<cfset variables.StartDate="#$.content('Kickoff_Request')#">
-<cfelseif $.content('Systems_Request_Signoff_Date') neq "">
+<cfelseif $.content('Systems_Request_Signoff_Date') neq "">  
 	<cfset variables.StartDate="#$.content('Systems_Request_Signoff_Date')#">	<!--- dateAdd('yyyy',-2,Now()) --->
 <cfelse>
 	<cfset variables.startDate = "#Now()#">
