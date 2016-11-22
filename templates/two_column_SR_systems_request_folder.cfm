@@ -11,7 +11,7 @@
 <!----- SYSTEMS REQUEST CODE ------------>
 <cfif $.content('Kickoff_Request') neq "">
 	<cfset variables.StartDate="#$.content('Kickoff_Request')#">
-<cfelseif $.content('Systems_Request_Signoff_Date') neq "">  
+<cfelseif $.content('Systems_Request_Signoff_Date') neq "">
 	<cfset variables.StartDate="#$.content('Systems_Request_Signoff_Date')#">	<!--- dateAdd('yyyy',-2,Now()) --->
 <cfelse>
 	<cfset variables.startDate = "#Now()#">
@@ -144,10 +144,8 @@ Status is Ready to Migrate if Syste_Test_Meeting_Date is not null and in the pas
 
 <cfscript>
 	content=$.content();
-
-		// Get an iterator of the node's child content.
+		// Get an iterator of the documentation and artifacts as children this Systems Request.
 		iterator = content.getKidsIterator();
-
 		iterator.setNextN(1);
 </cfscript>
 <cfoutput>
@@ -159,14 +157,15 @@ Status is Ready to Migrate if Syste_Test_Meeting_Date is not null and in the pas
 <cfloop from="1" to="#iterator.pageCount()#" index="p">
 	<cfset iterator.setPage(p)>
 	<!--- <ul> --->
-
 		<cfloop condition="iterator.hasNext()">
 
 			<cfset item=iterator.next()>
 
 			<cfset variables.TypeOfDocument = item.getValue('subtype')>
 
+				<!--- What type of document is this? --->
 			<cfswitch expression="#variables.TypeOfDocument#">
+
 				<cfcase value="System Request Form">
 
 					<cfsavecontent variable="variables.SRFormContent">
@@ -183,8 +182,7 @@ Status is Ready to Migrate if Syste_Test_Meeting_Date is not null and in the pas
 						<tr>
 							<td>#variables.DateReceivedBySA#</td>
 							<td>#variables.DateReceivedByIT#</td>
-							<td><a href="#item.getURL()#">
-					#HTMLEditFormat(item.getMenuTitle())#
+							<td><a href="#item.getURL()#">#HTMLEditFormat(item.getMenuTitle())#
 					</a></td>
 						</tr>
 					</table>
@@ -210,25 +208,31 @@ Status is Ready to Migrate if Syste_Test_Meeting_Date is not null and in the pas
 
 					<table>
 						<tr>
+							<th>Upload Date</th>
 							<th>Ready Date</th>
 							<th>Vote Date</th>
 							<th>Approved Date</th>
-							<th>Last Upload Date</th>
 							<th>Version</th>
 							<th>Download</th>
+							<th>Notes</th>
 						</tr>
 						<tr>
 							<cfset variables.DDCompletedDate="#item.getValue('DesignDocCompletedDate')#">
 							<cfset variables.DDVotingDate="#item.getValue('DesignDocSentForVotingDate')#">
 							<cfset variables.DDApprovedDate="#item.getValue('ApprovedDate')#">
 							<cfset variables.DDUploadDate="#item.getValue('lastUpdate')#">
+							<cfset variables.summary = "#item.getValue('summary')#">
 
-							<td>#Dateformat(variables.DDCompletedDate,"m/d/yyyy")#</td>
-							<td>#Dateformat(variables.DDVotingDate,"m/d/yyyy")#</td>
-							<td>#Dateformat(variables.DDApprovedDate,"m/d/yyyy")#</td>
 							<td>#Dateformat(variables.DDUploadDate,"m/d/yyyy")# (#item.getValue('lastUpdateBy')#)</td>
+							<td><cfif variables.DDCompletedDate eq "">DRAFT<CFELSE>#Dateformat(variables.DDCompletedDate,"m/d/yyyy")#</cfif>
+							</td>
+							<td><cfif variables.DDCompletedDate eq "">DRAFT<CFELSE>#Dateformat(variables.DDVotingDate,"m/d/yyyy")#</cfif>
+							</td>
+							<td><cfif variables.DDCompletedDate eq "">DRAFT<CFELSE>#Dateformat(variables.DDApprovedDate,"m/d/yyyy")#</cfif>
+							</td>
 							<td>#item.getValue('majorversion')#.#item.getValue('minorversion')#</td>
 							<td><a href="#item.getURL()#">#HTMLEditFormat(item.getMenuTitle())#</a></td>
+							<td>#variables.summary#</td>
 						</tr>
 					</table>
 					<!--- <cfdump var="#item.getContentBean()#">	  --->
@@ -299,7 +303,12 @@ Status is Ready to Migrate if Syste_Test_Meeting_Date is not null and in the pas
 
 			<h3>Design Document</h3>
 			<cfif not isDefined("variables.DesignDocContent")>
+				<!--- Determine if Design Doc is needed --->
+				<cfif $.content('Design_Doc_Necessary') eq "Yes">
 				<p>Content Not Available</p>
+				<cfelse>
+				<p>Design Document Not Required for this SR.</p>
+				</cfif>
 			<cfelse>
 				#variables.DesignDocContent#
 			</cfif>
