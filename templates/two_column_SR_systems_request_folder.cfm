@@ -28,7 +28,7 @@
 <cfset variables.StatusDate="">
 <!--- RECEIVED BY SYSTEMS ADMIN --->
 <cfif #$.content('Systems_Request_Signoff_Date')# neq "" and #$.content('Systems_Request_Signoff_Date')# lte Now()>
-	<cfset variables.status="Signed off by Systems Administration ">
+	<cfset variables.status="Signed off by Systems Administration. ">
 	<cfif $.content('Kickoff_Request') neq '' and $.content('Kickoff_Meeting_Date') eq ''>
 		<cfset variables.Status = variables.status & "Kick off requested on ">
 		<cfset variables.StatusDate = #Dateformat($.content('Kickoff_Request'),'m/d/yyyy')#>
@@ -37,13 +37,17 @@
 </cfif>
 
 <!--- KICKED OFF --->
-<cfif #$.content('Kickoff_Meeting_Date')# lte Now()>
+<cfif #$.content('Kickoff_Meeting_Date')# lte Now() and #$.content('Kickoff_Meeting_Date')# neq "">
 	<cfset variables.status="Kicked off  ">
 	<!--- <cfif $.content('Kickoff_Request') neq '' and $.content('Kickoff_Meeting_Date') eq ''>
 		<cfset variables.Status = variables.status & "on ">
 		<cfset variables.StatusDate = #Dateformat($.content('Kickoff_Meeting_Date'),'m/d/yyyy')#>
 	</cfif> --->
 	<cfset variables.StatusDate="#DateFormat($.content('Kickoff_Meeting_Date'),'m/d/yyyy')#">
+<!--- <cfelse>
+	<cfsavecontent variable="SendKickoffRequest">
+		<a href="mailto:webmaster@illinoiscomptroller.gov">Send Email to #$.content('SAP_Assigned')# requesting kickoff</a>
+	</cfsavecontent> --->
 </cfif>
 
 <!--- FUNCTIONAL COMPLETION DATE --->
@@ -100,7 +104,7 @@
 	<cfset variables.MigratedToProduction = "Yes">
 	<cfset variables.status="Migrated to Production">
 	<cfset variables.nextStatus = "">
-	<cfset variables.StatusDate="#DateFormat($.content('Migrated_To_Production_Date'),'m/d/yy')#">
+	<cfset variables.StatusDate="#DateFormat($.content('Migrated_To_Production_Date'),'m/d/yyyy')#">
 <cfelse>
 	<cfset variables.MigratedToProduction = "No">
 
@@ -124,7 +128,17 @@ Status is Ready to Migrate if Syste_Test_Meeting_Date is not null and in the pas
 				</cfif>)
 			</cfif></h3>
 			<cfif $.content('Kickoff_Meeting_Date') neq "" and DaysWorkingOnThis gt "0">
-				<h4>Total Days since Kickoff: #DaysWorkingOnThis#</h4>
+
+				<h4>Total Days since Kickoff: <!--- #DaysWorkingOnThis# --->
+				<!--- Check to ensure date has been entered --->
+			<cfif isDate($.content('Kickoff_Meeting_Date'))>
+				#Dateformat($.content('Kickoff_Meeting_Date'),'m/d/yyyy')# (#dateDiff('d',$.content('Kickoff_Meeting_Date'),Now())# days ago)
+			<cfelse>
+				Not yet entered into system.
+			</cfif>
+				</h4>
+
+				<!--- <h4>Total Days since Kickoff: #DaysWorkingOnThis#</h4> --->
 			</cfif>
 
 			<h3>Summary Information</h3>
@@ -137,7 +151,7 @@ Status is Ready to Migrate if Syste_Test_Meeting_Date is not null and in the pas
 				<tr>
 					<td>#$.content('Assigned_To')#</td>
 					<td>#$.content('Submitted_By')#</td>
-					<td>#$.content('SAP_Assigned')#</td>
+					 <td>#$.content('SAP_Assigned')# <!---#SendKickoffRequest#---></td> 
 				</tr>
 </table>
 			<h1>Official Documentation</h1>
@@ -151,8 +165,10 @@ Status is Ready to Migrate if Syste_Test_Meeting_Date is not null and in the pas
 <cfoutput>
 
 <cfset i="0">
+<cfset j="0">
 
 <cfset arrayMigrations=ArrayNew(2)>
+<cfset arrayTestResults=ArrayNew(2)>
 
 <cfloop from="1" to="#iterator.pageCount()#" index="p">
 	<cfset iterator.setPage(p)>
@@ -204,7 +220,7 @@ Status is Ready to Migrate if Syste_Test_Meeting_Date is not null and in the pas
 
 				</cfdefaultcase>
 				<cfcase value="Design Document">
-					<cfsavecontent variable="variables.DesignDocContent">
+					<cfsavecontent variable="variables.DesignDocContent">	<!--- Using CFSaveContent rather than an array here since there is only one design doc --->
 
 					<table>
 						<tr>
@@ -239,7 +255,7 @@ Status is Ready to Migrate if Syste_Test_Meeting_Date is not null and in the pas
 					</cfsavecontent>
 
 				</cfcase>
-
+				<!--- if there become multiple test scripts, this cfsavecontent for test scripts will be changed to an array, like test results --->
 				<cfcase value="Test Script">
 
 					<cfsavecontent variable="variables.TSFormContent">
@@ -259,34 +275,15 @@ Status is Ready to Migrate if Syste_Test_Meeting_Date is not null and in the pas
 				</cfcase>
 				<cfcase value="Test Results">
 
-					<cfsavecontent variable="variables.TRFormContent">
+						<cfset j = j+1>
 
-					<table>
-						<tr>
-							<th>System or User?</th>
-							<th>Ready Date</th>
-							<th>Vote Date</th>
-							<th>Approved Date</th>
-							<th>File</th>
-						</tr>
+						<cfset arrayTestResults[j][1] = "#item.getTRReadyDate()#"> 					<!--- "TRReadyDate" is an Attribute. Both item.getTRReadyDate() and item.getValue('TRReadyDate') will work --->
+						<cfset arrayTestResults[j][2] = "#item.getValue('TRVotingDate')#">	<!--- Here is an example of the other way you can get a value --->
+						<cfset arrayTestResults[j][3] = "#item.getValue('TRApprovedDate')#">
+						<cfset arrayTestResults[j][4] = "#item.getTestingType()#">
+						<cfset arrayTestResults[j][5] = "#item.getURL()#">
+						<cfset arrayTestResults[j][6] = "#item.getMenuTitle()#">
 
-							<cfset variables.TRCompletedDate="#item.getValue('TRReadyDate')#">
-							<cfset variables.TRVotingDate="#item.getValue('TRVotingDate')#">
-							<cfset variables.TRApprovedDate="#item.getValue('TRApprovedDate')#">
-
-						<tr>
-							<td><cfif item.getTestingType() eq "Both">
-								System and User Together
-								<cfelse>
-									#item.getTestingType()#
-							</cfif></td>
-							<td>#Dateformat(variables.TRCompletedDate,"m/d/yyyy")#</td>
-							<td>#Dateformat(variables.TRVotingDate,"m/d/yyyy")#</td>
-							<td>#Dateformat(variables.TRApprovedDate,"m/d/yyyy")#</td>
-							<td><a href="#item.getURL()#">#HTMLEditFormat(item.getMenuTitle())#</a></td>
-						</tr>
-					</table>
-					</cfsavecontent>
 				</cfcase>
 			</cfswitch>
 			<!--- </li> --->
@@ -296,7 +293,7 @@ Status is Ready to Migrate if Syste_Test_Meeting_Date is not null and in the pas
 
 			<h3>Systems Request Form</h3>
 			<cfif not isDefined("variables.SRFormContent")>
-				<p>Content Not Available</p>
+				<p>Content not yet available.</p>
 			<cfelse>
 				#variables.SRFormContent#
 			</cfif>
@@ -305,7 +302,7 @@ Status is Ready to Migrate if Syste_Test_Meeting_Date is not null and in the pas
 			<cfif not isDefined("variables.DesignDocContent")>
 				<!--- Determine if Design Doc is needed --->
 				<cfif $.content('Design_Doc_Necessary') eq "Yes">
-				<p>Content Not Available</p>
+				<p>Content not yet available.</p>
 				<cfelse>
 				<p>Design Document Not Required for this SR.</p>
 				</cfif>
@@ -314,18 +311,28 @@ Status is Ready to Migrate if Syste_Test_Meeting_Date is not null and in the pas
 			</cfif>
 
 			<h3>Testing</h3>
-			<cfif not isDefined("variables.TSFormContent")>
-				<!--- <p>Content Not Available</p> --->
-			<cfelse>
-				#variables.TSFormContent#
-			</cfif>
 
-			<cfif not isDefined("variables.TRFormContent")>
-				<p>Content Not Available</p>
-			<cfelse>
-				#variables.TRFormContent#
-			</cfif>
+ 			<h4>Test Results</h4>
 
+			<table>
+				<tr>
+					<th>Ready Date</th>
+					<th>Vote Date</th>
+					<th>Approved Date</th>
+					<th>System or User?</th>
+					<th>Download</th>
+				</tr>
+<cfloop array="#arrayTestResults#" index="k">
+				<tr>
+					<td>#DateFormat(k[1],'m/d/yyyy')#</td>
+					 <td>#DateFormat(k[2],'m/d/yyyy')#</td>
+					 <td>#DateFormat(k[3],'m/d/yyyy')#</td>
+					 <td>
+						 #k[4]#</td>
+					<td><a href="#k[5]#">#k[6]#</a></td>
+				</tr>
+</cfloop>
+</table>
 			<h3>Migration Form(s)</h3>
 
 			<!--- <cfdump var="#arrayMigrations#"> --->
@@ -335,100 +342,23 @@ Status is Ready to Migrate if Syste_Test_Meeting_Date is not null and in the pas
 				<tr>
 					<th>Region</th><th>Name of Form</th><th>Date Migrated</th>
 				</tr>
-			<cfloop array="#arrayMigrations#" index="j">
+			<!--- array loop in CF 2016 is 2,500x faster than CF 11 !!! --->
+			<cfloop array="#arrayMigrations#" index="g">
 				<tr>
-					<td>#j[1]#</td>
-					<td><a href="#j[3]#">#j[2]#</a></td>
-					<td>#dateformat(j[4], 'm/d/yyyy')#</td>
+					<td>#g[1]#</td>
+					<td><a href="#g[3]#">#j[2]#</a></td>
+					<td>#dateformat(g[4], 'm/d/yyyy')#</td>
 				</tr>
 
 			</cfloop>
 			</table>
 </cfoutput>
 
-			<!--- REVISIONS COMING SOON --->
-			<!---
-			<ul>
-			<cfif $.content('System_Request_Form') is not "">
-				<li><a target="_blank" href="#$.globalConfig('context')#/tasks/render/file/?fileID=#$.content('System_Request_Form')#">Systems Request Form</a></li>
-			<cfelse>
-				<li>Systems Request Form <b>not yet on file</b></li>
-			</cfif>
 
-
-			<cfif $.content('Completed_Design_Document_File') is not "">
-				<li><a target="_blank" href="#$.globalConfig('context')#/tasks/render/file/?fileID=#$.content('Completed_Design_Document_File')#">Design Document</a>
-				<cfif $.content('Design_Doc_Approved_Date') neq "">
-				 Completed on #Dateformat($.content('Design_Doc_Approved_Date'),'m/d/yyyy')#
-				 <cfelse>
-				 (DRAFT) Not Yet Completed
-				</cfif>
-				</li>
-			<cfelse>
-				<li>Design Document <b>not yet on file</b>. </li>
-			</cfif>
-
-			<cfif $.content('UATMigrationForm') is not "">
-				<li><a target="_blank" href="#$.globalConfig('context')#/tasks/render/file/?fileID=#$.content('UATMigrationForm')#">UAT Migration Form</a>
-				<!--- <cfif $.content('Script_Approved_Date') neq "">
-				 UAT Migration Approved on #Dateformat($.content('Script_Approved_Date'),'m/d/yyyy')#
-				</cfif> --->
-				</li>
-			<cfelse>
-				<li>UAT Script <b>not yet on file</b>. </li>
-			</cfif>
-
-			<cfif $.content('Completed_UAT_Script_File') is not "">
-				<li><a target="_blank" href="#$.globalConfig('context')#/tasks/render/file/?fileID=#$.content('Completed_UAT_Script_File')#">UAT Script</a>
-				<cfif $.content('Script_Approved_Date') neq "">
-				 Script Approved on #Dateformat($.content('Script_Approved_Date'),'m/d/yyyy')#
-				</cfif>
-				</li>
-			<cfelse>
-				<li>UAT Script <b>not yet on file</b>. </li>
-			</cfif>
-
-			<cfif $.content('Completed_Test_Results_File') is not "">
-				<li><a target="_blank" href="#$.globalConfig('context')#/tasks/render/file/?fileID=#$.content('Completed_Test_Results_File')#">Test Results</a>
-				<cfif $.content('System_Test_Meeting_Date') neq "">
-				 Completed on #Dateformat($.content('System_Test_Meeting_Date'),'m/d/yyyy')#
-				</cfif>
-				</li>
-			<cfelse>
-				<li>Completed Test Results <b>not yet on file</b>.</li>
-			</cfif>
-
-			<cfif $.content('Scanned_Migration_Form') is not "">
-				<li><a target="_blank" href="#$.globalConfig('context')#/tasks/render/file/?fileID=#$.content('Scanned_Migration_Form')#">Migration Form</a>
-				<cfif $.content('Migrated_To_Production_Date') neq "">
-				 Completed on #Dateformat($.content('Migrated_To_Production_Date'),'m/d/yyyy')#
-				</cfif>
-				</li>
-			<cfelse>
-				<li>Migration Form <b>not yet on file</b>.</li>
-			</cfif>
-
-			</ul>
-			--->
-
-<!--- </cfif> --->
-
-
-
-<!--- <p><a target="_blank" href="#$.globalConfig('context')#/tasks/render/file/?fileID=#$.content('Scanned_Migration_Form')#">
-Migration Form</a></p> --->
 
 <div style="alert alert-info">
 			<h3>Key Dates</h3>
 			<ul>
-			<li>Received by Systems Administration:
-			<!--- Check to ensure date has been entered --->
-			<cfif isDate($.content('Received_By_Systems_Admin'))>
-				#Dateformat($.content('Received_By_Systems_Admin'),'m/d/yyyy')# (#dateDiff('d',$.content('Received_By_Systems_Admin'),Now())# days ago)
-			<cfelse>
-				Not yet entered into system.
-			</cfif>
-			</li></li>
 
 			<li>Systems Administration Signoff:
 			<!--- Check to ensure date has been entered --->
